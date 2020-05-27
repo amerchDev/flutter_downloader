@@ -23,6 +23,9 @@
 #define KEY_OPEN_FILE_FROM_NOTIFICATION @"open_file_from_notification"
 #define KEY_QUERY @"query"
 #define KEY_TIME_CREATED @"time_created"
+#define KEY_EARLIEST_BEGIN_DATE @"earliest_begin_date"
+#define KEY_HTTP_BODY @"http_body"
+#define KEY_HTTP_METHOD @"http_method"
 
 #define NULL_VALUE @"<null>"
 
@@ -142,7 +145,7 @@ static BOOL debug = YES;
     return _session;
 }
 
-- (NSURLSessionDownloadTask*)downloadTaskWithURL: (NSURL*) url fileName: (NSString*) fileName andSavedDir: (NSString*) savedDir andHeaders: (NSString*) headers
+- (NSURLSessionDownloadTask*)downloadTaskWithURL: (NSURL*) url fileName: (NSString*) fileName andSavedDir: (NSString*) savedDir andHeaders: (NSString*) headers andEarliestBeginDate: (NSDate*) earliestBeginDate andHttpBody: (NSString*) httpBody andHttpMethod: (NSString*) httpMethod
 {
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:url];
     if (headers != nil && [headers length] > 0) {
@@ -158,7 +161,13 @@ static BOOL debug = YES;
             [request setValue:value forHTTPHeaderField:key];
         }
     }
+    request.HTTPBody = [httpBody dataUsingEncoding:NSUTF8StringEncoding];
+    request.HTTPMethod = httpMethod;
     NSURLSessionDownloadTask *task = [[self currentSession] downloadTaskWithRequest:request];
+    task.earliestBeginDate = earliestBeginDate;
+    task.countOfBytesClientExpectsToReceive = 27*1024;
+    task.countOfBytesClientExpectsToSend=100;
+    NSLog(@"downloadTaskWithURL[task resume]");
     [task resume];
 
     return task;
@@ -374,10 +383,15 @@ static BOOL debug = YES;
     : [origin stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
 }
 
-- (void) addNewTask: (NSString*) taskId url: (NSString*) url status: (int) status progress: (int) progress filename: (NSString*) filename savedDir: (NSString*) savedDir headers: (NSString*) headers resumable: (BOOL) resumable showNotification: (BOOL) showNotification openFileFromNotification: (BOOL) openFileFromNotification
+- (void) addNewTask: (NSString*) taskId url: (NSString*) url status: (int) status progress: (int) progress filename: (NSString*) filename 
+savedDir: (NSString*) savedDir headers: (NSString*) headers resumable: (BOOL) resumable 
+showNotification: (BOOL) showNotification openFileFromNotification: (BOOL) openFileFromNotification
+earliestBeginDate: (NSDate*) earliestBeginDate
+httpBody: (NSString*) httpBody
+httpMethod: (NSString*) httpMethod
 {
     headers = [self escape:headers revert:false];
-    NSString *query = [NSString stringWithFormat:@"INSERT INTO task (task_id,url,status,progress,file_name,saved_dir,headers,resumable,show_notification,open_file_from_notification,time_created) VALUES (\"%@\",\"%@\",%d,%d,\"%@\",\"%@\",\"%@\",%d,%d,%d,%lld)", taskId, url, status, progress, filename, savedDir, headers, resumable ? 1 : 0, showNotification ? 1 : 0, openFileFromNotification ? 1 : 0, [self currentTimeInMilliseconds]];
+    NSString *query = [NSString stringWithFormat:@"INSERT INTO task (task_id,url,status,progress,file_name,saved_dir,headers,resumable,show_notification,open_file_from_notification,time_created,earliest_begin_date, http_body, http_method) VALUES (\'%@\',\'%@\',%d,%d,\'%@\',\'%@\',\'%@\',%d,%d,%d,%lld,\'%@\',\'%@\',\'%@\')", taskId, url, status, progress, filename, savedDir, headers, resumable ? 1 : 0, showNotification ? 1 : 0, openFileFromNotification ? 1 : 0, [self currentTimeInMilliseconds],earliestBeginDate,httpBody, httpMethod];
     [_dbManager executeQuery:query];
     if (debug) {
         if (_dbManager.affectedRows != 0) {
@@ -530,7 +544,10 @@ static BOOL debug = YES;
     int showNotification = [[record objectAtIndex:[_dbManager.arrColumnNames indexOfObject:@"show_notification"]] intValue];
     int openFileFromNotification = [[record objectAtIndex:[_dbManager.arrColumnNames indexOfObject:@"open_file_from_notification"]] intValue];
     long long timeCreated = [[record objectAtIndex:[_dbManager.arrColumnNames indexOfObject:@"time_created"]] longLongValue];
-    return [NSDictionary dictionaryWithObjectsAndKeys:taskId, KEY_TASK_ID, @(status), KEY_STATUS, @(progress), KEY_PROGRESS, url, KEY_URL, filename, KEY_FILE_NAME, headers, KEY_HEADERS, savedDir, KEY_SAVED_DIR, [NSNumber numberWithBool:(resumable == 1)], KEY_RESUMABLE, [NSNumber numberWithBool:(showNotification == 1)], KEY_SHOW_NOTIFICATION, [NSNumber numberWithBool:(openFileFromNotification == 1)], KEY_OPEN_FILE_FROM_NOTIFICATION, @(timeCreated), KEY_TIME_CREATED, nil];
+    NSDate *earliestBeginDate = [record objectAtIndex:[_dbManager.arrColumnNames indexOfObject:@"earliest_begin_date"]];
+    NSString *httpBody = [record objectAtIndex:[_dbManager.arrColumnNames indexOfObject:@"http_body"]];
+    NSString *httpMethod = [record objectAtIndex:[_dbManager.arrColumnNames indexOfObject:@"http_method"]];
+    return [NSDictionary dictionaryWithObjectsAndKeys:taskId, KEY_TASK_ID, @(status), KEY_STATUS, @(progress), KEY_PROGRESS, url, KEY_URL, filename, KEY_FILE_NAME, headers, KEY_HEADERS, savedDir, KEY_SAVED_DIR, [NSNumber numberWithBool:(resumable == 1)], KEY_RESUMABLE, [NSNumber numberWithBool:(showNotification == 1)], KEY_SHOW_NOTIFICATION, [NSNumber numberWithBool:(openFileFromNotification == 1)], KEY_OPEN_FILE_FROM_NOTIFICATION, @(timeCreated), KEY_TIME_CREATED, earliestBeginDate,KEY_EARLIEST_BEGIN_DATE, httpBody,KEY_HTTP_BODY,httpMethod,KEY_HTTP_METHOD, nil];
 }
 
 # pragma mark - FlutterDownloader
@@ -570,8 +587,20 @@ static BOOL debug = YES;
     NSString *headers = call.arguments[KEY_HEADERS];
     NSNumber *showNotification = call.arguments[KEY_SHOW_NOTIFICATION];
     NSNumber *openFileFromNotification = call.arguments[KEY_OPEN_FILE_FROM_NOTIFICATION];
+    NSString *dateString = call.arguments[KEY_EARLIEST_BEGIN_DATE];
+    NSString *httpBody = call.arguments[KEY_HTTP_BODY];
+    NSString *httpMethod = call.arguments[KEY_HTTP_METHOD];
 
-    NSURLSessionDownloadTask *task = [self downloadTaskWithURL:[NSURL URLWithString:urlString] fileName:fileName andSavedDir:savedDir andHeaders:headers];
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+    NSDate *earliestBeginDate = [dateFormatter dateFromString:[dateString substringToIndex:19]];
+
+    NSLog(@"dateString = %@",dateString);
+    NSLog(@"dateString = %@",[dateString substringToIndex:19]);
+    NSLog(@"earliestBeginDate = %@",earliestBeginDate);
+
+    NSURLSessionDownloadTask *task = [self downloadTaskWithURL:[NSURL URLWithString:urlString] fileName:fileName andSavedDir:savedDir andHeaders:headers andEarliestBeginDate: earliestBeginDate andHttpBody: httpBody andHttpMethod:httpMethod];
+    
 
     NSString *taskId = [self identifierForTask:task];
 
@@ -589,7 +618,7 @@ static BOOL debug = YES;
 
     __typeof__(self) __weak weakSelf = self;
     dispatch_sync(databaseQueue, ^{
-        [weakSelf addNewTask:taskId url:urlString status:STATUS_ENQUEUED progress:0 filename:fileName savedDir:shortSavedDir headers:headers resumable:NO showNotification: [showNotification boolValue] openFileFromNotification: [openFileFromNotification boolValue]];
+        [weakSelf addNewTask:taskId url:urlString status:STATUS_ENQUEUED progress:0 filename:fileName savedDir:shortSavedDir headers:headers resumable:NO showNotification: [showNotification boolValue] openFileFromNotification: [openFileFromNotification boolValue] earliestBeginDate: earliestBeginDate httpBody:httpBody httpMethod:httpMethod];
     });
     result(taskId);
     [self sendUpdateProgressForTaskId:taskId inStatus:@(STATUS_ENQUEUED) andProgress:@0];
@@ -646,6 +675,8 @@ static BOOL debug = YES;
             if (resumeData != nil) {
                 NSURLSessionDownloadTask *task = [[self currentSession] downloadTaskWithResumeData:resumeData];
                 NSString *newTaskId = [self identifierForTask:task];
+
+    NSLog(@"resumeMethodCall[task resume]");
                 [task resume];
 
                 // update memory-cache, assign a new taskId for paused task
@@ -689,8 +720,16 @@ static BOOL debug = YES;
             NSString *savedDir = taskDict[KEY_SAVED_DIR];
             NSString *fileName = taskDict[KEY_FILE_NAME];
             NSString *headers = taskDict[KEY_HEADERS];
+            NSString *dateString = call.arguments[KEY_EARLIEST_BEGIN_DATE];
+            NSString *httpBody = call.arguments[KEY_HTTP_BODY];
+            NSString *httpMethod = call.arguments[KEY_HTTP_METHOD];
 
-            NSURLSessionDownloadTask *newTask = [self downloadTaskWithURL:[NSURL URLWithString:urlString] fileName:fileName andSavedDir:savedDir andHeaders:headers];
+            NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+            [dateFormatter setDateFormat:@"yyyy-MM-dd hh:mm:ss"];
+            NSDate *earliestBeginDate = [dateFormatter dateFromString:dateString];
+
+
+            NSURLSessionDownloadTask *newTask = [self downloadTaskWithURL:[NSURL URLWithString:urlString] fileName:fileName andSavedDir:savedDir andHeaders:headers andEarliestBeginDate: earliestBeginDate andHttpBody:httpBody andHttpMethod:httpMethod];
             NSString *newTaskId = [self identifierForTask:newTask];
 
             // update memory-cache

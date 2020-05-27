@@ -14,9 +14,10 @@ public class DownloadTask {
     boolean showNotification;
     boolean openFileFromNotification;
     long timeCreated;
+    long earliestBeginDate;
 
     DownloadTask(int primaryId, String taskId, int status, int progress, String url, String filename, String savedDir,
-                 String headers, String mimeType, boolean resumable, boolean showNotification, boolean openFileFromNotification, long timeCreated) {
+                 String headers, String mimeType, boolean resumable, boolean showNotification, boolean openFileFromNotification, long timeCreated, long earliestBeginDate) {
         this.primaryId = primaryId;
         this.taskId = taskId;
         this.status = status;
@@ -30,6 +31,7 @@ public class DownloadTask {
         this.showNotification = showNotification;
         this.openFileFromNotification = openFileFromNotification;
         this.timeCreated = timeCreated;
+        this.earliestBeginDate = earliestBeginDate;
     }
 
     @Override

@@ -69,9 +69,16 @@ class FlutterDownloader {
       Map<String, String> headers,
       bool showNotification = true,
       bool openFileFromNotification = true,
-      bool requiresStorageNotLow = true}) async {
+      bool requiresStorageNotLow = true,
+      DateTime earliestBeginDate = null,
+      String httpBody = '',
+      String httpMethod = 'GET'}) async {
     assert(_initialized, 'FlutterDownloader.initialize() must be called first');
     assert(Directory(savedDir).existsSync());
+
+    if (earliestBeginDate == null) {
+      earliestBeginDate = DateTime.now();
+    }
 
     StringBuffer headerBuilder = StringBuffer();
     if (headers != null) {
@@ -91,6 +98,9 @@ class FlutterDownloader {
         'show_notification': showNotification,
         'open_file_from_notification': openFileFromNotification,
         'requires_storage_not_low': requiresStorageNotLow,
+        'earliest_begin_date': earliestBeginDate.toString(),
+        'http_body':httpBody,
+        'http_method':httpMethod,
       });
       return taskId;
     } on PlatformException catch (e) {
