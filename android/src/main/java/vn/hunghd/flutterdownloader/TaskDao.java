@@ -24,8 +24,10 @@ public class TaskDao {
             TaskContract.TaskEntry.COLUMN_NAME_RESUMABLE,
             TaskContract.TaskEntry.COLUMN_NAME_OPEN_FILE_FROM_NOTIFICATION,
             TaskContract.TaskEntry.COLUMN_NAME_SHOW_NOTIFICATION,
-            TaskContract.TaskEntry.COLUMN_NAME_TIME_CREATED,
-            TaskContract.TaskEntry.COLUMN_NAME_EARLIEST_BEGIN_DATE
+            TaskContract.TaskEntry.COLUMN_NAME_TIME_CREATED, 
+            TaskContract.TaskEntry.COLUMN_NAME_EARLIEST_BEGIN_DATE,
+            TaskContract.TaskEntry.COLUMN_NAME_HTTP_METHOD,
+            TaskContract.TaskEntry.COLUMN_NAME_HTTP_BODY
     };
 
     public TaskDao(TaskDbHelper helper) {
@@ -33,7 +35,7 @@ public class TaskDao {
     }
 
     public void insertOrUpdateNewTask(String taskId, String url, int status, int progress, String fileName,
-                                       String savedDir, String headers, boolean showNotification, boolean openFileFromNotification, long earliestBeginDate) {
+                                       String savedDir, String headers, boolean showNotification, boolean openFileFromNotification, long earliestBeginDate, String httpMethod, String httpBody) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
 
         ContentValues values = new ContentValues();
@@ -50,6 +52,8 @@ public class TaskDao {
         values.put(TaskContract.TaskEntry.COLUMN_NAME_RESUMABLE, 0);
         values.put(TaskContract.TaskEntry.COLUMN_NAME_TIME_CREATED, System.currentTimeMillis());
         values.put(TaskContract.TaskEntry.COLUMN_NAME_EARLIEST_BEGIN_DATE, earliestBeginDate);
+        values.put(TaskContract.TaskEntry.COLUMN_NAME_HTTP_METHOD, httpMethod);
+        values.put(TaskContract.TaskEntry.COLUMN_NAME_HTTP_BODY, httpBody);
 
         db.beginTransaction();
         try {

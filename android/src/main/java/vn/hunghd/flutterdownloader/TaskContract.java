@@ -22,6 +22,8 @@ public class TaskContract {
         public static final String COLUMN_NAME_OPEN_FILE_FROM_NOTIFICATION = "open_file_from_notification";
         public static final String COLUMN_NAME_TIME_CREATED = "time_created";
         public static final String COLUMN_NAME_EARLIEST_BEGIN_DATE = "earliest_begin_date";
+        public static final String COLUMN_NAME_HTTP_METHOD = "http_method";
+        public static final String COLUMN_NAME_HTTP_BODY = "http_body";
     }
 
 }

@@ -132,8 +132,7 @@ public class FlutterDownloaderPlugin implements MethodCallHandler, FlutterPlugin
                         .putLong(DownloadWorker.ARG_CALLBACK_HANDLE, callbackHandle)
                         .putBoolean(DownloadWorker.ARG_DEBUG, debugMode == 1)
                         .putString(DownloadWorker.ARG_HTTP_METHOD, httpMethod)
-                        .putString(DownloadWorker.ARG_HTTP_BODY,httpBody)
-                        .build())
+                        .putString(DownloadWorker.ARG_HTTP_BODY, httpBody).build())
                 .build();
         return request;
     }
@@ -185,13 +184,13 @@ public class FlutterDownloaderPlugin implements MethodCallHandler, FlutterPlugin
         long earliestBeginDate = date.getTime();
 
         WorkRequest request = buildRequest(url, savedDir, filename, headers, showNotification, openFileFromNotification,
-                false, requiresStorageNotLow, earliestBeginDate, httpMethod,httpBody);
+                false, requiresStorageNotLow, earliestBeginDate, httpMethod, httpBody);
         WorkManager.getInstance(context).enqueue(request);
         String taskId = request.getId().toString();
         result.success(taskId);
         sendUpdateProgress(taskId, DownloadStatus.ENQUEUED, 0);
         taskDao.insertOrUpdateNewTask(taskId, url, DownloadStatus.ENQUEUED, 0, filename, savedDir, headers,
-                showNotification, openFileFromNotification, earliestBeginDate);
+                showNotification, openFileFromNotification, earliestBeginDate, httpMethod, httpBody);
     }
 
     private void loadTasks(MethodCall call, MethodChannel.Result result) {
