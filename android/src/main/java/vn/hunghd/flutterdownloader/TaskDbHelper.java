@@ -27,8 +27,8 @@ public class TaskDbHelper extends SQLiteOpenHelper {
                     TaskEntry.COLUMN_NAME_SHOW_NOTIFICATION + " TINYINT DEFAULT 0, " +
                     TaskEntry.COLUMN_NAME_OPEN_FILE_FROM_NOTIFICATION + " TINYINT DEFAULT 0, " +
                     TaskEntry.COLUMN_NAME_TIME_CREATED + " INTEGER DEFAULT 0, "
-                    + TaskEntry.COLUMN_NAME_EARLIEST_BEGIN_DATE + " DATETIME "
-                    + TaskEntry.COLUMN_NAME_HTTP_METHOD + " TEXT "
+                    + TaskEntry.COLUMN_NAME_EARLIEST_BEGIN_DATE + " DATETIME, "
+                    + TaskEntry.COLUMN_NAME_HTTP_METHOD + " TEXT, "
                     + TaskEntry.COLUMN_NAME_HTTP_BODY + " TEXT "
                     + ")";
 
