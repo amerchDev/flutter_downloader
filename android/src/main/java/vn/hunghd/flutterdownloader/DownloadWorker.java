@@ -276,7 +276,7 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
                 httpConn.setReadTimeout(15000);
                 httpConn.setInstanceFollowRedirects(false); // Make the logic below easier to detect redirections
                 httpConn.setRequestProperty("User-Agent", "Mozilla/5.0...");
-                httpMethod="POST";
+
                 httpConn.setRequestMethod(httpMethod);
 
                 // setup request headers if it is set

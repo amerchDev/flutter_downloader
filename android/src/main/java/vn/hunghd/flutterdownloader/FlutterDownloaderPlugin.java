@@ -116,7 +116,7 @@ public class FlutterDownloaderPlugin implements MethodCallHandler, FlutterPlugin
 
     private WorkRequest buildRequest(String url, String savedDir, String filename, String headers,
             boolean showNotification, boolean openFileFromNotification, boolean isResume, boolean requiresStorageNotLow,
-            Long earliestBeginDate, String httpBody, String httpMethod) {
+            Long earliestBeginDate, String httpMethod, String httpBody) {
         WorkRequest request = new OneTimeWorkRequest.Builder(DownloadWorker.class)
                 .setConstraints(new Constraints.Builder().setRequiresStorageNotLow(requiresStorageNotLow)
                         .setRequiredNetworkType(NetworkType.CONNECTED).build())
@@ -174,7 +174,6 @@ public class FlutterDownloaderPlugin implements MethodCallHandler, FlutterPlugin
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String httpMethod = call.argument("http_method");
         String httpBody = call.argument("http_body");
-
         Date date;
         try {
             date = (Date) formatter.parse(earliestBeginDateString.substring(0, 19));
