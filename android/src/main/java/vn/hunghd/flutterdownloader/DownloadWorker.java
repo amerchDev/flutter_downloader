@@ -276,7 +276,6 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
                 httpConn.setReadTimeout(15000);
                 httpConn.setInstanceFollowRedirects(false); // Make the logic below easier to detect redirections
                 httpConn.setRequestProperty("User-Agent", "Mozilla/5.0...");
-
                 httpConn.setRequestMethod(httpMethod);
 
                 // setup request headers if it is set
@@ -285,6 +284,9 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
                 if (isResume) {
                     downloadedBytes = setupPartialDownloadedDataHeader(httpConn, filename, savedDir);
                 }
+                OutputStream os = httpConn.getOutputStream();
+                os.write(httpBody.getBytes());
+                os.close();
 
                 responseCode = httpConn.getResponseCode();
                 switch (responseCode) {
@@ -303,9 +305,7 @@ public class DownloadWorker extends Worker implements MethodChannel.MethodCallHa
 
                 break;
             }
-            OutputStream os = httpConn.getOutputStream();
-            os.write(httpBody.getBytes());
-            os.close();
+
             httpConn.connect();
 
             if ((responseCode == HttpURLConnection.HTTP_OK
